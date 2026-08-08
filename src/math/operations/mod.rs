@@ -10,6 +10,7 @@ pub mod basic;
 pub mod logarithm;
 pub mod power;
 pub mod arithmetic;
+pub mod placeholders;
 
 pub use basic::{Double, DoubleAssign, Abs, TryDouble, TryDoubleAssign, TryAbs};
 pub use logarithm::{Log, Ln, TryLog, TryLn};
@@ -21,3 +22,4 @@ pub use arithmetic::{
     TryAdd, TryAddAssign, TrySub, TrySubAssign, TryMul, TryMulAssign, TryDiv, TryDivAssign,
     TryRem, TryRemAssign,
 };
+pub use placeholders::{RationalNumber, RealNumber};

@@ -1,9 +1,8 @@
 use crate::math::NaturalNumbers::NaturalNumber;
-use crate::math::operations::{Mul, MulAssign};
+use crate::math::operations::MulAssign;
 use crate::math::NaturalNumbers::utils::slice::{safe_split, pop_leading_zeros};
 use crate::math::NaturalNumbers::utils::arithmetic::{add_slices, add_into, sub_from, mul_wide};
 
-// The threshold where the overhead of Karatsuba becomes worse than Schoolbook
 const KARATSUBA_CUTOFF: usize = 30;
 
 impl MulAssign for NaturalNumber {
@@ -18,17 +17,6 @@ impl MulAssign for NaturalNumber {
         // This is incredibly fast—it just updates the pointer, length, and capacity
         // without copying the actual data in memory.
         self.limbs = result_limbs;
-    }
-}
-
-// Now we can update `Mul` to just call `MulAssign`, keeping your code perfectly DRY!
-impl Mul for NaturalNumber {
-    type Output = NaturalNumber;
-
-    fn mul(mut self, other: NaturalNumber) -> NaturalNumber {
-        // This directly calls the `mul_assign` function above
-        self *= other;
-        self
     }
 }
 

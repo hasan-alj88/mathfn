@@ -1,6 +1,6 @@
 use crate::math::NaturalNumbers::NaturalNumber;
 use rayon::prelude::*;
-use std::ops::{Add, AddAssign};
+use std::ops::AddAssign;
 
 impl AddAssign for NaturalNumber {
     fn add_assign(&mut self, other: NaturalNumber) {
@@ -54,16 +54,5 @@ impl AddAssign for NaturalNumber {
                 }
             }
         }
-    }
-}
-
-// Reuse AddAssign for Add
-impl Add for NaturalNumber {
-    type Output = NaturalNumber;
-
-    fn add(mut self, other: NaturalNumber) -> NaturalNumber {
-        // Just use the `+=` operator which routes directly to `add_assign`
-        self += other;
-        self
     }
 }
