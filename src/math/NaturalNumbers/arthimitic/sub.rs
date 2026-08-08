@@ -1,5 +1,6 @@
 use crate::math::NaturalNumbers::NaturalNumber;
-use crate::math::IntegerNunbers::integer_numbers::{IntegerNumber, Sign};
+use crate::math::IntegerNunbers::IntegerNumber;
+use crate::math::Sign;
 use crate::math::operations::Sub;
 
 impl Sub for NaturalNumber {

@@ -22,4 +22,5 @@ pub use arithmetic::{
     TryAdd, TryAddAssign, TrySub, TrySubAssign, TryMul, TryMulAssign, TryDiv, TryDivAssign,
     TryRem, TryRemAssign,
 };
-pub use placeholders::{RationalNumber, RealNumber};
+pub use placeholders::RealNumber;
+pub use crate::math::RationalNumbers::RationalNumber;
