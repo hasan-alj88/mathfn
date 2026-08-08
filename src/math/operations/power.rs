@@ -1,21 +1,52 @@
-// Re-export standard library operations traits
-#[allow(unused_imports)]
-pub use std::ops::{
-    Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Deref,
-    DerefMut, Div, DivAssign, Index, IndexMut, Mul, MulAssign, Neg, Not, Rem, RemAssign, Shl,
-    ShlAssign, Shr, ShrAssign, Sub, SubAssign,
-};
-
-
-/// Generic trait for exponentiation operation (`pow`).
 pub trait Pow<Rhs = Self> {
     type Output;
     fn pow(self, rhs: Rhs) -> Self::Output;
 }
 
-/// Generic trait for in-place exponentiation operation (`pow_assign`).
 pub trait PowAssign<Rhs = Self> {
     fn pow_assign(&mut self, rhs: Rhs);
+}
+
+pub trait Square {
+    type Output;
+    fn square(self) -> Self::Output;
+}
+
+pub trait SquareAssign {
+    fn square_assign(&mut self);
+}
+
+pub trait Sqrt {
+    type Output;
+    fn sqrt(self) -> Self::Output;
+}
+
+pub trait TryPow<Rhs = Self> {
+    type Output;
+    type Error;
+    fn try_pow(self, rhs: Rhs) -> Result<Self::Output, Self::Error>;
+}
+
+pub trait TryPowAssign<Rhs = Self> {
+    type Error;
+    fn try_pow_assign(&mut self, rhs: Rhs) -> Result<(), Self::Error>;
+}
+
+pub trait TrySquare {
+    type Output;
+    type Error;
+    fn try_square(self) -> Result<Self::Output, Self::Error>;
+}
+
+pub trait TrySquareAssign {
+    type Error;
+    fn try_square_assign(&mut self) -> Result<(), Self::Error>;
+}
+
+pub trait TrySqrt {
+    type Output;
+    type Error;
+    fn try_sqrt(self) -> Result<Self::Output, Self::Error>;
 }
 
 // Implement Pow and PowAssign for primitive integer types with u32 exponent
@@ -87,4 +118,3 @@ mod tests {
         assert_eq!(f, 2.0f32);
     }
 }
-
