@@ -9,10 +9,15 @@ pub use std::ops::{
 pub mod basic;
 pub mod logarithm;
 pub mod power;
+pub mod arithmetic;
 
 pub use basic::{Double, DoubleAssign, Abs, TryDouble, TryDoubleAssign, TryAbs};
 pub use logarithm::{Log, Ln, TryLog, TryLn};
 pub use power::{
     Pow, PowAssign, Square, SquareAssign, Sqrt, TryPow, TryPowAssign, TrySquare, TrySquareAssign,
     TrySqrt,
+};
+pub use arithmetic::{
+    TryAdd, TryAddAssign, TrySub, TrySubAssign, TryMul, TryMulAssign, TryDiv, TryDivAssign,
+    TryRem, TryRemAssign,
 };
