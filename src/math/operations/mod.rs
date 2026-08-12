@@ -23,4 +23,3 @@ pub use arithmetic::{
     TryRem, TryRemAssign,
 };
 pub use placeholders::RealNumber;
-pub use crate::math::RationalNumbers::RationalNumber;
