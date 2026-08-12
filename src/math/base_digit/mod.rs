@@ -117,6 +117,38 @@ impl<const BASE: u128> BaseDigit<BASE> {
         }
         (q, r)
     }
+
+    pub fn into_digit<const NEW_BASE: u128>(self) -> Result<BaseDigit<NEW_BASE>, &'static str> {
+        BaseDigit::<NEW_BASE>::new(self.value())
+    }
+
+    pub fn convert_overflow<const NEW_BASE: u128>(self) -> Result<Vec<BaseDigit<NEW_BASE>>, &'static str> {
+        if NEW_BASE == 1 {
+            return Err("Base cannot be 1");
+        }
+        let mut val = self.value();
+        let mut result = Vec::new();
+
+        if NEW_BASE == 0 {
+            result.push(BaseDigit::<NEW_BASE>::new(val)?);
+            result.push(BaseDigit::<NEW_BASE>::new(0)?);
+            return Ok(result);
+        }
+
+        result.push(BaseDigit::<NEW_BASE>::new(val % NEW_BASE)?);
+        val /= NEW_BASE;
+
+        while val > 0 {
+            result.push(BaseDigit::<NEW_BASE>::new(val % NEW_BASE)?);
+            val /= NEW_BASE;
+        }
+
+        if result.len() == 1 {
+            result.push(BaseDigit::<NEW_BASE>::new(0)?);
+        }
+
+        Ok(result)
+    }
 }
 
 impl<const BASE: u128> DigitAdd for BaseDigit<BASE> {
@@ -303,5 +335,34 @@ mod tests {
         let (low, high) = max.mul_digit(max, zero);
         assert_eq!(low.value(), 1);
         assert_eq!(high.value(), u128::MAX - 1);
+    }
+
+    #[test]
+    fn test_base_digit_conversion() {
+        // 12_10 to base 16: [12_16, 0_16]
+        // Note: 12 is valid in base 20, let's construct a base 20 digit of value 12
+        let digit_12_base20 = BaseDigit::<20>::new(12).unwrap();
+        let res_16 = digit_12_base20.convert_overflow::<16>().unwrap();
+        assert_eq!(res_16.len(), 2);
+        assert_eq!(res_16[0].value(), 12);
+        assert_eq!(res_16[1].value(), 0);
+
+        // 10_10 to base 2: [0_2, 1_2, 0_2, 1_2]
+        // Let's construct a base 20 digit of value 10
+        let digit_10_base20 = BaseDigit::<20>::new(10).unwrap();
+        let res_2 = digit_10_base20.convert_overflow::<2>().unwrap();
+        assert_eq!(res_2.len(), 4);
+        assert_eq!(res_2[0].value(), 0);
+        assert_eq!(res_2[1].value(), 1);
+        assert_eq!(res_2[2].value(), 0);
+        assert_eq!(res_2[3].value(), 1);
+
+        // into_digit tests
+        let digit_9_base10 = BaseDigit::<10>::new(9).unwrap();
+        let res_into_16 = digit_9_base10.into_digit::<16>().unwrap();
+        assert_eq!(res_into_16.value(), 9);
+
+        let digit_18_base20 = BaseDigit::<20>::new(18).unwrap();
+        assert!(digit_18_base20.into_digit::<10>().is_err());
     }
 }
