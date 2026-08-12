@@ -2,13 +2,16 @@
 
 Introduce a generic `BaseDigit` struct parameterized by a const generic `BASE` parameter, using a hybrid stack/heap storage enum `DigitStorage` to avoid heap allocations for common bases (storing 1, 2, 4, or 8 byte digits inline) while falling back to a heap-allocated `Vec<u8>` for larger bases. This design compiles on stable Rust.
 
+Additionally, define convenient type aliases for commonly used bases, specifically Base 10 (decimal) and Base 16 (hexadecimal).
+
 ## Goal
 1. Implement a hybrid storage enum `DigitStorage` containing variants for `[u8; 1]`, `[u8; 2]`, `[u8; 4]`, `[u8; 8]`, and a fallback `Vec<u8>`.
 2. Define `BaseDigit<const BASE: u128 = 256>` wrapping `DigitStorage`.
 3. Transition `NaturalNumber` to be parameterized by `const BASE: u128 = 256`, utilizing `digits: Vec<BaseDigit<BASE>>` instead of `limbs: Vec<u128>`.
 4. Propagate the generic `BASE` parameter to `IntegerNumber`, `PositiveNaturalNumber`, and `RationalNumber`.
-5. Implement `std::fmt::Display` for all number types with custom base formatting.
-6. Implement a base conversion method `.convert_base::<const NEW_BASE: u128>()` using target-base arithmetic.
+5. Expose type aliases for Base 10 and Base 16 versions of all number types (e.g. `NaturalNumber10`, `NaturalNumber16`).
+6. Implement `std::fmt::Display` for all number types with custom base formatting.
+7. Implement a base conversion method `.convert_base::<const NEW_BASE: u128>()` using target-base arithmetic.
 
 ## Proposed Architecture
 
@@ -130,6 +133,10 @@ impl<const BASE: u128> NaturalNumber<BASE> {
         Self { digits }
     }
 }
+
+// Common base type aliases
+pub type NaturalNumber10 = NaturalNumber<10>;
+pub type NaturalNumber16 = NaturalNumber<16>;
 ```
 
 ### 2. Display Implementations
@@ -195,6 +202,10 @@ impl<const BASE: u128> fmt::Display for IntegerNumber<BASE> {
         }
     }
 }
+
+// Common base type aliases
+pub type IntegerNumber10 = IntegerNumber<10>;
+pub type IntegerNumber16 = IntegerNumber<16>;
 ```
 
 #### `PositiveNaturalNumber<BASE>` (in `src/math/PositiveNaturalNumbers/positive_natural_numbers.rs`)
@@ -212,6 +223,10 @@ impl<const BASE: u128> fmt::Display for PositiveNaturalNumber<BASE> {
         write!(f, "{}", self.to_value())
     }
 }
+
+// Common base type aliases
+pub type PositiveNaturalNumber10 = PositiveNaturalNumber<10>;
+pub type PositiveNaturalNumber16 = PositiveNaturalNumber<16>;
 ```
 
 #### `RationalNumber<BASE>` (in `src/math/RationalNumbers/rational_numbers.rs`)
@@ -234,6 +249,10 @@ impl<const BASE: u128> fmt::Display for RationalNumber<BASE> {
         write!(f, "{}{} / {}", sign_prefix, self.numerator, self.denominator)
     }
 }
+
+// Common base type aliases
+pub type RationalNumber10 = RationalNumber<10>;
+pub type RationalNumber16 = RationalNumber<16>;
 ```
 
 ### 3. Base Conversion Method
@@ -276,3 +295,4 @@ impl<const OLD_BASE: u128> NaturalNumber<OLD_BASE> {
    - Digit instantiation with the `DigitStorage` stack/heap variants.
    - Correct base-to-base conversion using `.convert_base()`.
    - String formatting output for both small base (<= 36) and large base (> 36) cases.
+   - Working operations with `NaturalNumber10` and `NaturalNumber16`.
