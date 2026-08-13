@@ -9,6 +9,12 @@ pub enum MathError {
     },
     #[error("Math object {math_object}.")]
     MathObjectIsUndefined{math_object: String},
+    #[error("Division by zero.")]
+    DivisionByZero,
+    #[error("Quotient overflow.")]
+    QuotientOverflow,
+    #[error("Base mismatch.")]
+    BaseMismatch,
 }
 
 
