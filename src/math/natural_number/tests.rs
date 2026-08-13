@@ -63,4 +63,30 @@ fn test_subtraction() {
     assert!(nat_sub_schoolbook(&small_a, &small_b).is_err());
 }
 
+#[test]
+fn test_multiplication() {
+    use crate::math::natural_number::multiplication::{nat_mul_schoolbook, nat_mul_karatsuba};
+
+    let a = NaturalNumber::<256>::from_u128(12).unwrap();
+    let b = NaturalNumber::<256>::from_u128(13).unwrap();
+
+    let prod1 = nat_mul_schoolbook(&a, &b).unwrap();
+    assert_eq!(prod1.to_u128().unwrap(), 156);
+
+    let prod2 = nat_mul_karatsuba(&a, &b).unwrap();
+    assert_eq!(prod2.to_u128().unwrap(), 156);
+
+    // Verify zero multiplication
+    let zero = NaturalNumber::<256>::from_u128(0).unwrap();
+    assert_eq!(nat_mul_schoolbook(&a, &zero).unwrap().to_u128().unwrap(), 0);
+    assert_eq!(nat_mul_karatsuba(&a, &zero).unwrap().to_u128().unwrap(), 0);
+
+    // Larger inputs (triggering Karatsuba split)
+    let large_a = NaturalNumber::<256>::from_u128(1000000).unwrap();
+    let large_b = NaturalNumber::<256>::from_u128(5000000).unwrap();
+    let prod_large = nat_mul_karatsuba(&large_a, &large_b).unwrap();
+    assert_eq!(prod_large.to_u128().unwrap(), 5000000000000);
+}
+
+
 
