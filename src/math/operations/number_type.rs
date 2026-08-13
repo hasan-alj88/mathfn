@@ -229,87 +229,30 @@ impl<const BASE: u128> NumberType<BASE> for FiniteContinuedFractionNumber<BASE> 
 /// Real numbers can be represented using various models depending on their precision
 /// and periodic patterns.
 pub enum RealNumber<const BASE: u128 = 256> {
-    /// A finite positional expansion.
-    ///
-    /// Represented exactly as:
-    /// $$V = \text{integer\_part} + \text{fractional\_part} \cdot \text{BASE}^{-\text{len}}$$
-    /// Digits beyond the fractional part are unknown, hence querying them fails.
-    ///
-    /// # Guide
-    /// Stored fractional part digits are in Most Significant Digit first order.
-    ///
-    /// # Examples
-    /// ```ignore
-    /// # use mathfn::math::operations::number_type::RealNumber;
-    /// # use mathfn::math::natural_number::NaturalNumber;
-    /// let r = RealNumber::<256>::FinitePrecision {
-    ///     integer_part: NaturalNumber::from_u128(12).unwrap(),
-    ///     fractional_part: NaturalNumber::from_u128(34).unwrap(),
-    /// };
-    /// ```
-    FinitePrecision {
-        integer_part: NaturalNumber<BASE>,
-        fractional_part: NaturalNumber<BASE>,
+    /// An exact finite positional expansion.
+    ExactFinite(FinitePrecision<BASE>),
+    /// An approximate finite positional expansion.
+    /// Digits beyond the stored fractional part are unknown (fails with UnknownDigit).
+    Approximate(FinitePrecision<BASE>),
+    /// A finite continued fraction.
+    FiniteContinuedFraction(FiniteContinuedFractionNumber<BASE>),
+    /// An infinite continued fraction where coefficients eventually repeat periodicially (e.g. sqrt(2) = [1; 2, 2, 2...]).
+    RepeatedContinuedFraction {
+        integer_part: IntegerNumber<BASE>,                    // a_0
+        non_repeating: Vec<PositiveNaturalNumber<BASE>>,       // non-repeating coefficients
+        repeating: Vec<PositiveNaturalNumber<BASE>>,           // periodic repeating coefficients
     },
+    /// A continued fraction acting as an approximation of a real number (fails beyond its known convergent accuracy).
+    ApproximateContinuedFraction(FiniteContinuedFractionNumber<BASE>),
     /// A floating-point number.
-    ///
-    /// Represented as:
-    /// $$V = \text{sign} \cdot \text{mantissa} \cdot \text{BASE}^{\text{power}}$$
-    /// This is an exact rational/real representation, so all digits below the mantissa's scale are exactly 0.
-    ///
-    /// # Examples
-    /// ```ignore
-    /// # use mathfn::math::operations::number_type::RealNumber;
-    /// # use mathfn::math::positive_natural::PositiveNaturalNumber;
-    /// # use mathfn::math::integer_number::IntegerNumber;
-    /// # use mathfn::math::sign::Sign;
-    /// let f = RealNumber::<256>::Float {
-    ///     mantissa: PositiveNaturalNumber::try_from(123u128).unwrap(),
-    ///     power: IntegerNumber::try_from(-2i32).unwrap(),
-    ///     sign: Sign::Positive,
-    /// };
-    /// ```
     Float {
         mantissa: PositiveNaturalNumber<BASE>,
         power: IntegerNumber<BASE>,
         sign: Sign,
     },
     /// An arbitrary formula yielding the digit at any position.
-    ///
-    /// Useful for representing computable irrational numbers like $\pi$ or $e$.
-    ///
-    /// # Examples
-    /// ```ignore
-    /// # use std::sync::Arc;
-    /// # use mathfn::math::operations::number_type::RealNumber;
-    /// # use mathfn::math::base_digit::Digit;
-    /// // Represents 0.3333... via a formula
-    /// let formula = RealNumber::<256>::DigitalFormula(Arc::new(|pos| {
-    ///     if pos < 0 {
-    ///         Ok(Digit::new(3).unwrap())
-    ///     } else {
-    ///         Ok(Digit::new(0).unwrap())
-    ///     }
-    /// }));
-    /// ```
     DigitalFormula(Arc<dyn Fn(i64) -> Result<Digit<BASE>, MathError> + Send + Sync>),
     /// A periodic / repeating positional expansion.
-    ///
-    /// Represented as:
-    /// $$V = \text{integer\_part} + 0.\text{fractional\_part}(\text{repeated}\dots)$$
-    /// An infinitely long expansion that is completely determined by its period.
-    ///
-    /// # Examples
-    /// ```ignore
-    /// # use mathfn::math::operations::number_type::RealNumber;
-    /// # use mathfn::math::natural_number::NaturalNumber;
-    /// // Represents 0.12(34)
-    /// let r = RealNumber::<256>::Repeated {
-    ///     integer_part: NaturalNumber::from_u128(0).unwrap(),
-    ///     fractional_part: NaturalNumber::from_u128(12).unwrap(),
-    ///     repeated: NaturalNumber::from_u128(34).unwrap(),
-    /// };
-    /// ```
     Repeated {
         integer_part: NaturalNumber<BASE>,
         fractional_part: NaturalNumber<BASE>,
@@ -318,44 +261,52 @@ pub enum RealNumber<const BASE: u128 = 256> {
 }
 
 impl<const BASE: u128> NumberType<BASE> for RealNumber<BASE> {
-    /// Yields the digit of this real number at the given index.
-    ///
-    /// # Guide
-    /// - For `FinitePrecision`: Returns `MathError::UnknownDigit` if index is out of bounds for the fractional part.
-    /// - For `Float`: Digits below the mantissa's scale return `Ok(0)`.
-    /// - For `Repeated`: The fractional digits cycle infinitely through the `repeated` digits.
-    ///
-    /// # Examples
-    /// ```ignore
-    /// # use mathfn::math::operations::number_type::RealNumber;
-    /// # use mathfn::math::natural_number::NaturalNumber;
-    /// # use mathfn::math::operations::NumberType;
-    /// let r = RealNumber::<256>::FinitePrecision {
-    ///     integer_part: NaturalNumber::from_u128(5).unwrap(),
-    ///     fractional_part: NaturalNumber::from_u128(6).unwrap(),
-    /// };
-    /// assert_eq!(r.digit(0).unwrap().value(), 5);
-    /// assert_eq!(r.digit(-1).unwrap().value(), 6);
-    /// assert!(r.digit(-2).is_err()); // Unknown digit
-    /// ```
     fn digit(&self, pos: i64) -> Result<Digit<BASE>, MathError> {
         let zero_digit = Digit::new(0).unwrap();
 
         match self {
-            RealNumber::FinitePrecision { integer_part, fractional_part } => {
-                if pos >= 0 {
-                    Ok(integer_part.digits()
-                        .get(pos as usize)
-                        .copied()
-                        .unwrap_or(zero_digit))
-                } else {
-                    let idx = (-pos - 1) as usize;
-                    if idx < fractional_part.digits().len() {
-                        Ok(fractional_part.digits()[idx])
-                    } else {
-                        Err(MathError::UnknownDigit { position: pos })
+            RealNumber::ExactFinite(fp) => fp.digit(pos),
+
+            RealNumber::Approximate(fp) => {
+                match pos {
+                    p if p >= 0 => fp.digit(p),
+                    p => {
+                        let idx = (-p - 1) as usize;
+                        match idx < fp.fractional_part.digits().len() {
+                            true => fp.digit(p),
+                            false => Err(MathError::UnknownDigit { position: p }),
+                        }
                     }
                 }
+            }
+
+            RealNumber::FiniteContinuedFraction(fcf) => fcf.digit(pos),
+
+            RealNumber::ApproximateContinuedFraction(fcf) => {
+                let rat = fcf.to_rational()?;
+                let q_n = NaturalNumber::from(rat.denominator().clone());
+                let q_len = q_n.digits().len() as i64;
+                match pos < -q_len {
+                    true => Err(MathError::UnknownDigit { position: pos }),
+                    false => rat.digit(pos),
+                }
+            }
+
+            RealNumber::RepeatedContinuedFraction { integer_part, non_repeating, repeating } => {
+                let mut coeffs = non_repeating.clone();
+                match repeating.is_empty() {
+                    true => {}
+                    false => {
+                        for _ in 0..10 {
+                            coeffs.extend(repeating.clone());
+                        }
+                    }
+                }
+                let fcf = FiniteContinuedFractionNumber {
+                    integer_part: integer_part.clone(),
+                    coefficients: coeffs,
+                };
+                fcf.digit(pos)
             }
 
             RealNumber::Float { mantissa, power, sign: _ } => {
@@ -364,14 +315,15 @@ impl<const BASE: u128> NumberType<BASE> for RealNumber<BASE> {
                     Err(_) => return Ok(zero_digit),
                 };
                 let mantissa_pos = pos - p_val;
-                if mantissa_pos >= 0 {
-                    let nat_mantissa = NaturalNumber::from(mantissa.clone());
-                    Ok(nat_mantissa.digits()
-                        .get(mantissa_pos as usize)
-                        .copied()
-                        .unwrap_or(zero_digit))
-                } else {
-                    Ok(zero_digit)
+                match mantissa_pos >= 0 {
+                    true => {
+                        let nat_mantissa = NaturalNumber::from(mantissa.clone());
+                        Ok(nat_mantissa.digits()
+                            .get(mantissa_pos as usize)
+                            .copied()
+                            .unwrap_or(zero_digit))
+                    }
+                    false => Ok(zero_digit),
                 }
             }
 
@@ -380,24 +332,29 @@ impl<const BASE: u128> NumberType<BASE> for RealNumber<BASE> {
             }
 
             RealNumber::Repeated { integer_part, fractional_part, repeated } => {
-                if pos >= 0 {
-                    Ok(integer_part.digits()
-                        .get(pos as usize)
-                        .copied()
-                        .unwrap_or(zero_digit))
-                } else {
-                    let k = -pos;
-                    let f_len = fractional_part.digits().len() as i64;
-                    if k <= f_len {
-                        Ok(fractional_part.digits()[(k - 1) as usize])
-                    } else {
-                        let r_len = repeated.digits().len() as i64;
-                        if r_len == 0 {
-                            Ok(zero_digit)
-                        } else {
-                            let offset = k - 1 - f_len;
-                            let r_idx = (offset % r_len) as usize;
-                            Ok(repeated.digits()[r_idx])
+                match pos >= 0 {
+                    true => {
+                        Ok(integer_part.digits()
+                            .get(pos as usize)
+                            .copied()
+                            .unwrap_or(zero_digit))
+                    }
+                    false => {
+                        let k = -pos;
+                        let f_len = fractional_part.digits().len() as i64;
+                        match k <= f_len {
+                            true => Ok(fractional_part.digits()[(k - 1) as usize]),
+                            false => {
+                                let r_len = repeated.digits().len() as i64;
+                                match r_len == 0 {
+                                    true => Ok(zero_digit),
+                                    false => {
+                                        let offset = k - 1 - f_len;
+                                        let r_idx = (offset % r_len) as usize;
+                                        Ok(repeated.digits()[r_idx])
+                                    }
+                                }
+                            }
                         }
                     }
                 }
