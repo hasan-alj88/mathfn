@@ -5,6 +5,7 @@ use crate::math::math_error::MathError;
 mod tests;
 
 pub mod addition;
+pub mod multiplication;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NaturalNumber<const BASE: u128 = 256> {

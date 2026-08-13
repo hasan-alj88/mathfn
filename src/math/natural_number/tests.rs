@@ -42,3 +42,25 @@ fn test_addition() {
     assert_eq!(sum2.to_u128().unwrap(), 256);
 }
 
+#[test]
+fn test_subtraction() {
+    use crate::math::natural_number::multiplication::nat_sub_schoolbook;
+
+    let a = NaturalNumber::<256>::from_u128(300).unwrap();
+    let b = NaturalNumber::<256>::from_u128(100).unwrap();
+    let diff = nat_sub_schoolbook(&a, &b).unwrap();
+    assert_eq!(diff.to_u128().unwrap(), 200);
+
+    // Borrow test
+    let large_a = NaturalNumber::<256>::from_u128(256).unwrap();
+    let large_b = NaturalNumber::<256>::from_u128(1).unwrap();
+    let diff2 = nat_sub_schoolbook(&large_a, &large_b).unwrap();
+    assert_eq!(diff2.to_u128().unwrap(), 255);
+
+    // Negative result (error) test
+    let small_a = NaturalNumber::<256>::from_u128(100).unwrap();
+    let small_b = NaturalNumber::<256>::from_u128(200).unwrap();
+    assert!(nat_sub_schoolbook(&small_a, &small_b).is_err());
+}
+
+
