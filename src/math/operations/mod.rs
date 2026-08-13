@@ -10,6 +10,9 @@ pub mod basic;
 pub mod logarithm;
 pub mod power;
 pub mod arithmetic;
+pub mod number_type;
+
+pub use number_type::NumberType;
 
 pub use basic::{Double, DoubleAssign, Abs, TryDouble, TryDoubleAssign, TryAbs};
 pub use logarithm::{Log, Ln, TryLog, TryLn};
