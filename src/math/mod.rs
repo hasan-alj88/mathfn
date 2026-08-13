@@ -3,6 +3,8 @@ pub mod group_theroy;
 pub mod math_error;
 pub mod operations;
 pub mod sign;
+pub mod natural_number;
+
 
 pub use sign::Sign;
 
