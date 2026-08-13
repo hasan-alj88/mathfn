@@ -190,6 +190,29 @@ fn test_natural_number_comparison() {
     assert!(a >= c);
 }
 
+#[test]
+fn test_natural_division_and_gcd() {
+    use crate::math::natural_number::division::{nat_div_rem_schoolbook, nat_gcd};
+
+    // Division by zero fails
+    let zero = NaturalNumber::<256>::from_u128(0).unwrap();
+    let ten = NaturalNumber::<256>::from_u128(10).unwrap();
+    assert!(nat_div_rem_schoolbook(&ten, &zero).is_err());
+
+    // 10 / 3 = 3 rem 1
+    let three = NaturalNumber::<256>::from_u128(3).unwrap();
+    let (q, r) = nat_div_rem_schoolbook(&ten, &three).unwrap();
+    assert_eq!(q.to_u128().unwrap(), 3);
+    assert_eq!(r.to_u128().unwrap(), 1);
+
+    // GCD(12, 18) = 6
+    let twelve = NaturalNumber::<256>::from_u128(12).unwrap();
+    let eighteen = NaturalNumber::<256>::from_u128(18).unwrap();
+    let g = nat_gcd(twelve, eighteen).unwrap();
+    assert_eq!(g.to_u128().unwrap(), 6);
+}
+
+
 
 
 
