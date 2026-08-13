@@ -115,3 +115,135 @@ where
         Self { re, im }
     }
 }
+
+use std::ops::{Add, Sub, Mul, Div, Rem};
+use crate::math::operations::power::Pow;
+
+impl<const BASE: u128, Rhs: NumberType<BASE> + Send + Sync + 'static> Add<Rhs> for RealNumber<BASE> {
+    type Output = RealNumber<BASE>;
+    fn add(self, rhs: Rhs) -> Self::Output {
+        let left = Arc::new(self);
+        let right = Arc::new(rhs);
+        RealNumber::DigitalFormula(Arc::new(move |pos| {
+            let d_l = left.digit(pos)?.value();
+            let d_r = right.digit(pos)?.value();
+            Digit::new((d_l + d_r) % BASE).map_err(|e| MathError::MathObjectIsUndefined { math_object: e.to_string() })
+        }))
+    }
+}
+
+impl<const BASE: u128, Rhs: NumberType<BASE> + Send + Sync + 'static> Sub<Rhs> for RealNumber<BASE> {
+    type Output = RealNumber<BASE>;
+    fn sub(self, rhs: Rhs) -> Self::Output {
+        let left = Arc::new(self);
+        let right = Arc::new(rhs);
+        RealNumber::DigitalFormula(Arc::new(move |pos| {
+            let d_l = left.digit(pos)?.value();
+            let d_r = right.digit(pos)?.value();
+            Digit::new((d_l + BASE - d_r) % BASE).map_err(|e| MathError::MathObjectIsUndefined { math_object: e.to_string() })
+        }))
+    }
+}
+
+impl<const BASE: u128, Rhs: NumberType<BASE> + Send + Sync + 'static> Mul<Rhs> for RealNumber<BASE> {
+    type Output = RealNumber<BASE>;
+    fn mul(self, rhs: Rhs) -> Self::Output {
+        let left = Arc::new(self);
+        let right = Arc::new(rhs);
+        RealNumber::DigitalFormula(Arc::new(move |pos| {
+            let d_l = left.digit(pos)?.value();
+            let d_r = right.digit(pos)?.value();
+            Digit::new((d_l * d_r) % BASE).map_err(|e| MathError::MathObjectIsUndefined { math_object: e.to_string() })
+        }))
+    }
+}
+
+impl<const BASE: u128, Rhs: NumberType<BASE> + Send + Sync + 'static> Div<Rhs> for RealNumber<BASE> {
+    type Output = RealNumber<BASE>;
+    fn div(self, rhs: Rhs) -> Self::Output {
+        let left = Arc::new(self);
+        let right = Arc::new(rhs);
+        RealNumber::DigitalFormula(Arc::new(move |pos| {
+            let d_l = left.digit(pos)?.value();
+            let d_r = right.digit(pos)?.value();
+            if d_r == 0 {
+                return Err(MathError::DivisionByZero);
+            }
+            Digit::new(d_l / d_r).map_err(|e| MathError::MathObjectIsUndefined { math_object: e.to_string() })
+        }))
+    }
+}
+
+impl<const BASE: u128, Rhs: NumberType<BASE> + Send + Sync + 'static> Rem<Rhs> for RealNumber<BASE> {
+    type Output = RealNumber<BASE>;
+    fn rem(self, rhs: Rhs) -> Self::Output {
+        let left = Arc::new(self);
+        let right = Arc::new(rhs);
+        RealNumber::DigitalFormula(Arc::new(move |pos| {
+            let d_l = left.digit(pos)?.value();
+            let d_r = right.digit(pos)?.value();
+            if d_r == 0 {
+                return Err(MathError::DivisionByZero);
+            }
+            Digit::new(d_l % d_r).map_err(|e| MathError::MathObjectIsUndefined { math_object: e.to_string() })
+        }))
+    }
+}
+
+impl<const BASE: u128, Rhs: NumberType<BASE> + Send + Sync + 'static> Pow<Rhs> for RealNumber<BASE> {
+    type Output = RealNumber<BASE>;
+    fn pow(self, rhs: Rhs) -> Self::Output {
+        let left = Arc::new(self);
+        let right = Arc::new(rhs);
+        RealNumber::DigitalFormula(Arc::new(move |pos| {
+            let d_l = left.digit(pos)?.value();
+            let d_r = right.digit(pos)?.value();
+            Digit::new(d_l.pow(d_r as u32) % BASE).map_err(|e| MathError::MathObjectIsUndefined { math_object: e.to_string() })
+        }))
+    }
+}
+
+impl<const BASE: u128, Lre, Lim, Rre, Rim> Add<ComplexNumber<BASE, Rre, Rim>> for ComplexNumber<BASE, Lre, Lim>
+where
+    Lre: NumberType<BASE> + Add<Rre, Output = RealNumber<BASE>>,
+    Lim: NumberType<BASE> + Add<Rim, Output = RealNumber<BASE>>,
+    Rre: NumberType<BASE>,
+    Rim: NumberType<BASE>,
+{
+    type Output = ComplexNumber<BASE, RealNumber<BASE>, RealNumber<BASE>>;
+    fn add(self, rhs: ComplexNumber<BASE, Rre, Rim>) -> Self::Output {
+        ComplexNumber::new(self.re + rhs.re, self.im + rhs.im)
+    }
+}
+
+impl<const BASE: u128, Lre, Lim, Rre, Rim> Sub<ComplexNumber<BASE, Rre, Rim>> for ComplexNumber<BASE, Lre, Lim>
+where
+    Lre: NumberType<BASE> + Sub<Rre, Output = RealNumber<BASE>>,
+    Lim: NumberType<BASE> + Sub<Rim, Output = RealNumber<BASE>>,
+    Rre: NumberType<BASE>,
+    Rim: NumberType<BASE>,
+{
+    type Output = ComplexNumber<BASE, RealNumber<BASE>, RealNumber<BASE>>;
+    fn sub(self, rhs: ComplexNumber<BASE, Rre, Rim>) -> Self::Output {
+        ComplexNumber::new(self.re - rhs.re, self.im - rhs.im)
+    }
+}
+
+impl<const BASE: u128, Lre, Lim, Rre, Rim> Mul<ComplexNumber<BASE, Rre, Rim>> for ComplexNumber<BASE, Lre, Lim>
+where
+    Lre: NumberType<BASE> + Mul<Rre, Output = RealNumber<BASE>> + Mul<Rim, Output = RealNumber<BASE>> + Clone,
+    Lim: NumberType<BASE> + Mul<Rim, Output = RealNumber<BASE>> + Mul<Rre, Output = RealNumber<BASE>> + Clone,
+    Rre: NumberType<BASE> + Clone,
+    Rim: NumberType<BASE> + Clone,
+    RealNumber<BASE>: Add<RealNumber<BASE>, Output = RealNumber<BASE>> + Sub<RealNumber<BASE>, Output = RealNumber<BASE>>,
+{
+    type Output = ComplexNumber<BASE, RealNumber<BASE>, RealNumber<BASE>>;
+    fn mul(self, rhs: ComplexNumber<BASE, Rre, Rim>) -> Self::Output {
+        let ac = self.re.clone() * rhs.re.clone();
+        let bd = self.im.clone() * rhs.im.clone();
+        let ad = self.re * rhs.im;
+        let bc = self.im * rhs.re;
+        ComplexNumber::new(ac - bd, ad + bc)
+    }
+}
+
