@@ -177,6 +177,20 @@ fn test_positive_natural_basics() {
     assert_eq!(u128::try_from(pos_five).unwrap(), 5);
 }
 
+#[test]
+fn test_natural_number_comparison() {
+    let a = NaturalNumber::<256>::from_u128(500).unwrap();
+    let b = NaturalNumber::<256>::from_u128(1000).unwrap();
+    let c = NaturalNumber::<256>::from_u128(500).unwrap();
+
+    assert!(a < b);
+    assert!(b > a);
+    assert_eq!(a, c);
+    assert!(a <= c);
+    assert!(a >= c);
+}
+
+
 
 
 

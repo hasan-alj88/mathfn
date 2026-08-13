@@ -191,3 +191,27 @@ macro_rules! impl_try_into_signed {
     };
 }
 impl_try_into_signed!(i128, i64, i32, i16, i8, isize);
+
+impl<const BASE: u128> Ord for NaturalNumber<BASE> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        match self.digits.len().cmp(&other.digits.len()) {
+            std::cmp::Ordering::Equal => {
+                self.digits.iter().zip(other.digits.iter()).rev()
+                    .map(|(a, b)| a.value().cmp(&b.value()))
+                    .find(|&ord| match ord {
+                        std::cmp::Ordering::Equal => false,
+                        _ => true,
+                    })
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            }
+            non_eq => non_eq,
+        }
+    }
+}
+
+impl<const BASE: u128> PartialOrd for NaturalNumber<BASE> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
