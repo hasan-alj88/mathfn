@@ -15,6 +15,8 @@ pub enum MathError {
     QuotientOverflow,
     #[error("Base mismatch.")]
     BaseMismatch,
+    #[error("Unknown digit at position {position}.")]
+    UnknownDigit { position: i64 },
 }
 
 
