@@ -64,6 +64,37 @@ pub trait NumberType<const BASE: u128> {
     fn digit(&self, pos: i64) -> Result<Digit<BASE>, MathError>;
 }
 
+/// A finite positional expansion representing an exact value.
+///
+/// $$V = \text{integer\_part} + \text{fractional\_part} \cdot \text{BASE}^{-\text{len}}$$
+/// Digits outside the stored ranges are exactly 0.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FinitePrecision<const BASE: u128 = 256> {
+    pub integer_part: NaturalNumber<BASE>,
+    pub fractional_part: NaturalNumber<BASE>, // MSD-first order
+}
+
+impl<const BASE: u128> NumberType<BASE> for FinitePrecision<BASE> {
+    fn digit(&self, pos: i64) -> Result<Digit<BASE>, MathError> {
+        let zero_digit = Digit::new(0).unwrap();
+        match pos {
+            p if p >= 0 => {
+                Ok(self.integer_part.digits()
+                    .get(p as usize)
+                    .copied()
+                    .unwrap_or(zero_digit))
+            }
+            p => {
+                let idx = (-p - 1) as usize;
+                Ok(self.fractional_part.digits()
+                    .get(idx)
+                    .copied()
+                    .unwrap_or(zero_digit))
+            }
+        }
+    }
+}
+
 /// A Real Number representation ($\mathbb{R}$) in base `BASE`.
 ///
 /// Real numbers can be represented using various models depending on their precision
