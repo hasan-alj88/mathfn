@@ -10,7 +10,7 @@ pub fn nat_add_schoolbook<const BASE: u128>(
     let mut carry = Digit::new(0).map_err(|_| MathError::BaseMismatch)?;
     let max_len = std::cmp::max(a.digits().len(), b.digits().len());
 
-    for i in 0..max_len {
+    (0..max_len).try_for_each(|i| {
         let digit_a = a.digits().get(i).cloned().unwrap_or_else(|| Digit::new(0).unwrap());
         let digit_b = b.digits().get(i).cloned().unwrap_or_else(|| Digit::new(0).unwrap());
 
@@ -25,10 +25,12 @@ pub fn nat_add_schoolbook<const BASE: u128>(
                 carry = carry_digit;
             }
         }
-    }
+        Ok::<(), MathError>(())
+    })?;
 
-    if carry.value() > 0 {
-        result_digits.push(carry);
+    match carry.value() {
+        0 => {}
+        _ => result_digits.push(carry),
     }
 
     Ok(NaturalNumber::new(result_digits))
