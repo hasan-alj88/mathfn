@@ -6,6 +6,7 @@ pub mod sign;
 pub mod natural_number;
 pub mod positive_natural;
 pub mod integer_number;
+pub mod rational_number;
 
 
 pub use sign::Sign;
