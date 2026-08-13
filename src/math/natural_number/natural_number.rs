@@ -1,6 +1,38 @@
 use crate::math::base_digit::Digit;
 use crate::math::math_error::MathError;
 
+/// An arbitrary-precision, non-negative integer represented in a positional numeral system with base `BASE`.
+///
+/// ### Mathematical Representation
+/// Any non-negative integer $N$ can be uniquely represented in base $B \ge 2$ as a sequence of coefficients (digits):
+/// $$N = \sum_{i=0}^{k} d_i B^i$$
+/// where each digit $d_i$ satisfies $0 \le d_i < B$.
+///
+/// In this type, the number is stored as a vector of `Digit<BASE>` in **Least Significant Digit (LSD) first** order:
+/// $$\text{digits} = [d_0, d_1, \dots, d_k]$$
+///
+/// ### Normalization Invariant
+/// To ensure a unique representation for each integer, the digit sequence is normalized.
+/// Except for the number zero itself, the most significant digit (the last element in our LSD vector) must be non-zero:
+/// $$d_k \ne 0$$
+///
+/// Under this invariant, the value zero is represented by an empty vector of digits:
+/// $$\text{zero} \equiv []$$
+///
+/// Whenever a `NaturalNumber` is constructed or undergoes arithmetic operations, it is normalized automatically
+/// by removing trailing zero digits from the internal vector.
+///
+/// ### Arithmetic Algorithms
+/// - **Addition**: Carried out digit-wise using the schoolbook carrying algorithm.
+/// - **Subtraction**: Performed using schoolbook borrow propagation (only defined when $A \ge B$ to preserve non-negativity).
+/// - **Multiplication**: Supports both standard schoolbook $O(n^2)$ multiplication and the Karatsuba algorithm.
+///   The Karatsuba algorithm splits $n$-digit numbers into high and low parts:
+///   $$A = A_{hi} B^m + A_{lo}, \quad B = B_{hi} B^m + B_{lo}$$
+///   where $m = \lfloor n/2 \rfloor$. It computes the product using only 3 multiplications instead of 4:
+///   $$A \cdot B = P_1 B^{2m} + (P_3 - P_1 - P_2) B^m + P_2$$
+///   where $P_1 = A_{hi} B_{hi}$, $P_2 = A_{lo} B_{lo}$, and $P_3 = (A_{hi} + A_{lo})(B_{hi} + B_{lo})$.
+///   This reduces complexity to $O(n^{\log_2 3}) \approx O(n^{1.585})$.
+/// - **Exponentiation**: Implemented using binary exponentiation by squaring in $O(\log e)$ multiplications.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NaturalNumber<const BASE: u128 = 256> {
     digits: Vec<Digit<BASE>>,
