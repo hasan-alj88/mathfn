@@ -107,6 +107,47 @@ fn test_exponentiation() {
     assert_eq!(nat_pow_binary(&base2, &exponent_zero).unwrap().to_u128().unwrap(), 1);
 }
 
+#[test]
+fn test_conversions() {
+    use std::convert::TryFrom;
+
+    // Primitives -> NaturalNumber
+    let num_unsigned = NaturalNumber::<256>::try_from(500u32).unwrap();
+    assert_eq!(num_unsigned.to_u128().unwrap(), 500);
+
+    let num_signed = NaturalNumber::<256>::try_from(123i64).unwrap();
+    assert_eq!(num_signed.to_u128().unwrap(), 123);
+
+    // Negative signed values fail
+    let num_neg = NaturalNumber::<256>::try_from(-10i32);
+    assert!(num_neg.is_err());
+
+    // NaturalNumber -> Primitives
+    let a = NaturalNumber::<256>::from_u128(1000).unwrap();
+    let a_u16 = u16::try_from(a.clone()).unwrap();
+    assert_eq!(a_u16, 1000);
+
+    // Overflow conversion fails
+    let a_u8 = u8::try_from(a.clone());
+    assert!(a_u8.is_err());
+
+    // Digit<BASE> <-> NaturalNumber
+    let digit = Digit::<256>::new(5).unwrap();
+    let num_from_digit = NaturalNumber::<256>::try_from(digit).unwrap();
+    assert_eq!(num_from_digit.to_u128().unwrap(), 5);
+
+    let digit_back = Digit::<256>::try_from(num_from_digit).unwrap();
+    assert_eq!(digit_back.value(), 5);
+
+    // Mismatched base for raw vector conversion
+    let raw_vector_ok = NaturalNumber::<256>::try_from(vec![244u128, 1u128]).unwrap();
+    assert_eq!(raw_vector_ok.to_u128().unwrap(), 500);
+
+    let raw_vector_err = NaturalNumber::<256>::try_from(vec![300u128]);
+    assert!(raw_vector_err.is_err());
+}
+
+
 
 
 
