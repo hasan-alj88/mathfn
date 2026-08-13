@@ -142,3 +142,24 @@ macro_rules! impl_try_into_unsigned_primitive {
     };
 }
 impl_try_into_unsigned_primitive!(u128, u64, u32, u16, u8, usize);
+
+impl<const BASE: u128> crate::math::operations::NumberType<BASE> for IntegerNumber<BASE> {
+    fn digit(&self, pos: i64) -> Result<crate::math::base_digit::Digit<BASE>, crate::math::math_error::MathError> {
+        let zero_digit = crate::math::base_digit::Digit::new(0).unwrap();
+        if pos >= 0 {
+            match self {
+                Self::Zero => Ok(zero_digit),
+                Self::Positive(abs) | Self::Negative(abs) => {
+                    let nat = NaturalNumber::from(abs.clone());
+                    Ok(nat.digits()
+                        .get(pos as usize)
+                        .copied()
+                        .unwrap_or(zero_digit))
+                }
+            }
+        } else {
+            Ok(zero_digit)
+        }
+    }
+}
+

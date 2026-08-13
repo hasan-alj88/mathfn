@@ -215,3 +215,18 @@ impl<const BASE: u128> PartialOrd for NaturalNumber<BASE> {
     }
 }
 
+impl<const BASE: u128> crate::math::operations::NumberType<BASE> for NaturalNumber<BASE> {
+    fn digit(&self, pos: i64) -> Result<crate::math::base_digit::Digit<BASE>, crate::math::math_error::MathError> {
+        let zero_digit = crate::math::base_digit::Digit::new(0).unwrap();
+        if pos >= 0 {
+            Ok(self.digits()
+                .get(pos as usize)
+                .copied()
+                .unwrap_or(zero_digit))
+        } else {
+            Ok(zero_digit)
+        }
+    }
+}
+
+

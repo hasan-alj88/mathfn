@@ -163,3 +163,32 @@ macro_rules! impl_try_from_unsigned_primitive {
     };
 }
 impl_try_from_unsigned_primitive!(u128, u64, u32, u16, u8, usize);
+
+impl<const BASE: u128> crate::math::operations::NumberType<BASE> for RationalNumber<BASE> {
+    fn digit(&self, pos: i64) -> Result<crate::math::base_digit::Digit<BASE>, crate::math::math_error::MathError> {
+        use crate::math::natural_number::NaturalNumber;
+        use crate::math::natural_number::division::nat_div_rem_schoolbook;
+        use crate::math::operations::NumberType;
+
+        let num_nat = NaturalNumber::from(self.numerator().clone());
+        let den_nat = NaturalNumber::from(self.denominator().clone());
+
+        if pos >= 0 {
+            // Integer part: floor(num / den)
+            let (q, _) = nat_div_rem_schoolbook(&num_nat, &den_nat)?;
+            q.digit(pos)
+        } else {
+            // Fractional part: floor(num * BASE^k / den) % BASE
+            let k = -pos;
+            let base_nat = NaturalNumber::from_u128(BASE)?;
+            let k_nat = NaturalNumber::from_u128(k as u128)?;
+            let factor = crate::math::natural_number::power::nat_pow_binary(&base_nat, &k_nat)?;
+            let scaled_num = crate::math::natural_number::multiplication::nat_mul_schoolbook(&num_nat, &factor)?;
+            let (q, _) = nat_div_rem_schoolbook(&scaled_num, &den_nat)?;
+            
+            // Get the units digit of q
+            q.digit(0)
+        }
+    }
+}
+
