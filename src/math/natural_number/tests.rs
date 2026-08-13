@@ -88,5 +88,25 @@ fn test_multiplication() {
     assert_eq!(prod_large.to_u128().unwrap(), 5000000000000);
 }
 
+#[test]
+fn test_exponentiation() {
+    use crate::math::natural_number::power::nat_pow_binary;
+
+    let base = NaturalNumber::<256>::from_u128(2).unwrap();
+    let exponent = NaturalNumber::<256>::from_u128(10).unwrap();
+    let result = nat_pow_binary(&base, &exponent).unwrap();
+    assert_eq!(result.to_u128().unwrap(), 1024);
+
+    let base2 = NaturalNumber::<256>::from_u128(3).unwrap();
+    let exponent2 = NaturalNumber::<256>::from_u128(5).unwrap();
+    let result2 = nat_pow_binary(&base2, &exponent2).unwrap();
+    assert_eq!(result2.to_u128().unwrap(), 243);
+
+    // Pow to 0
+    let exponent_zero = NaturalNumber::<256>::from_u128(0).unwrap();
+    assert_eq!(nat_pow_binary(&base2, &exponent_zero).unwrap().to_u128().unwrap(), 1);
+}
+
+
 
 

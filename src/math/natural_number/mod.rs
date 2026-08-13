@@ -6,6 +6,7 @@ mod tests;
 
 pub mod addition;
 pub mod multiplication;
+pub mod power;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NaturalNumber<const BASE: u128 = 256> {
