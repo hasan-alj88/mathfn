@@ -44,6 +44,20 @@ use std::sync::Arc;
 pub trait NumberType<const BASE: u128> {
     /// Returns the digit at position `pos`.
     ///
+    /// # Guide & Indexing Rules
+    /// - `pos = 0`: Units digit ($BASE^0$).
+    /// - `pos > 0`: Integer digit at power $BASE^{pos}$.
+    /// - `pos < 0`: Fractional digit at power $BASE^{pos}$.
+    ///
+    /// # Examples
+    /// ```ignore
+    /// # use mathfn::math::natural_number::NaturalNumber;
+    /// # use mathfn::math::operations::NumberType;
+    /// let nat = NaturalNumber::<256>::from_u128(123).unwrap();
+    /// assert_eq!(nat.digit(0).unwrap().value(), 123);
+    /// assert_eq!(nat.digit(1).unwrap().value(), 0);
+    /// ```
+    ///
     /// # Errors
     /// Returns `MathError::UnknownDigit` if the digit at the specified position is unknown
     /// (e.g., beyond the precision limit of a finite-precision real number).
@@ -60,6 +74,19 @@ pub enum RealNumber<const BASE: u128 = 256> {
     /// Represented exactly as:
     /// $$V = \text{integer\_part} + \text{fractional\_part} \cdot \text{BASE}^{-\text{len}}$$
     /// Digits beyond the fractional part are unknown, hence querying them fails.
+    ///
+    /// # Guide
+    /// Stored fractional part digits are in Most Significant Digit first order.
+    ///
+    /// # Examples
+    /// ```ignore
+    /// # use mathfn::math::operations::number_type::RealNumber;
+    /// # use mathfn::math::natural_number::NaturalNumber;
+    /// let r = RealNumber::<256>::FinitePrecision {
+    ///     integer_part: NaturalNumber::from_u128(12).unwrap(),
+    ///     fractional_part: NaturalNumber::from_u128(34).unwrap(),
+    /// };
+    /// ```
     FinitePrecision {
         integer_part: NaturalNumber<BASE>,
         fractional_part: NaturalNumber<BASE>,
@@ -69,6 +96,19 @@ pub enum RealNumber<const BASE: u128 = 256> {
     /// Represented as:
     /// $$V = \text{sign} \cdot \text{mantissa} \cdot \text{BASE}^{\text{power}}$$
     /// This is an exact rational/real representation, so all digits below the mantissa's scale are exactly 0.
+    ///
+    /// # Examples
+    /// ```ignore
+    /// # use mathfn::math::operations::number_type::RealNumber;
+    /// # use mathfn::math::positive_natural::PositiveNaturalNumber;
+    /// # use mathfn::math::integer_number::IntegerNumber;
+    /// # use mathfn::math::sign::Sign;
+    /// let f = RealNumber::<256>::Float {
+    ///     mantissa: PositiveNaturalNumber::try_from(123u128).unwrap(),
+    ///     power: IntegerNumber::try_from(-2i32).unwrap(),
+    ///     sign: Sign::Positive,
+    /// };
+    /// ```
     Float {
         mantissa: PositiveNaturalNumber<BASE>,
         power: IntegerNumber<BASE>,
@@ -77,12 +117,39 @@ pub enum RealNumber<const BASE: u128 = 256> {
     /// An arbitrary formula yielding the digit at any position.
     ///
     /// Useful for representing computable irrational numbers like $\pi$ or $e$.
+    ///
+    /// # Examples
+    /// ```ignore
+    /// # use std::sync::Arc;
+    /// # use mathfn::math::operations::number_type::RealNumber;
+    /// # use mathfn::math::base_digit::Digit;
+    /// // Represents 0.3333... via a formula
+    /// let formula = RealNumber::<256>::DigitalFormula(Arc::new(|pos| {
+    ///     if pos < 0 {
+    ///         Ok(Digit::new(3).unwrap())
+    ///     } else {
+    ///         Ok(Digit::new(0).unwrap())
+    ///     }
+    /// }));
+    /// ```
     DigitalFormula(Arc<dyn Fn(i64) -> Result<Digit<BASE>, MathError> + Send + Sync>),
     /// A periodic / repeating positional expansion.
     ///
     /// Represented as:
     /// $$V = \text{integer\_part} + 0.\text{fractional\_part}(\text{repeated}\dots)$$
     /// An infinitely long expansion that is completely determined by its period.
+    ///
+    /// # Examples
+    /// ```ignore
+    /// # use mathfn::math::operations::number_type::RealNumber;
+    /// # use mathfn::math::natural_number::NaturalNumber;
+    /// // Represents 0.12(34)
+    /// let r = RealNumber::<256>::Repeated {
+    ///     integer_part: NaturalNumber::from_u128(0).unwrap(),
+    ///     fractional_part: NaturalNumber::from_u128(12).unwrap(),
+    ///     repeated: NaturalNumber::from_u128(34).unwrap(),
+    /// };
+    /// ```
     Repeated {
         integer_part: NaturalNumber<BASE>,
         fractional_part: NaturalNumber<BASE>,
@@ -91,6 +158,26 @@ pub enum RealNumber<const BASE: u128 = 256> {
 }
 
 impl<const BASE: u128> NumberType<BASE> for RealNumber<BASE> {
+    /// Yields the digit of this real number at the given index.
+    ///
+    /// # Guide
+    /// - For `FinitePrecision`: Returns `MathError::UnknownDigit` if index is out of bounds for the fractional part.
+    /// - For `Float`: Digits below the mantissa's scale return `Ok(0)`.
+    /// - For `Repeated`: The fractional digits cycle infinitely through the `repeated` digits.
+    ///
+    /// # Examples
+    /// ```ignore
+    /// # use mathfn::math::operations::number_type::RealNumber;
+    /// # use mathfn::math::natural_number::NaturalNumber;
+    /// # use mathfn::math::operations::NumberType;
+    /// let r = RealNumber::<256>::FinitePrecision {
+    ///     integer_part: NaturalNumber::from_u128(5).unwrap(),
+    ///     fractional_part: NaturalNumber::from_u128(6).unwrap(),
+    /// };
+    /// assert_eq!(r.digit(0).unwrap().value(), 5);
+    /// assert_eq!(r.digit(-1).unwrap().value(), 6);
+    /// assert!(r.digit(-2).is_err()); // Unknown digit
+    /// ```
     fn digit(&self, pos: i64) -> Result<Digit<BASE>, MathError> {
         let zero_digit = Digit::new(0).unwrap();
 
@@ -177,6 +264,21 @@ where
     I: NumberType<BASE>,
 {
     /// Creates a new Complex Number from real and imaginary parts.
+    ///
+    /// # Examples
+    /// ```ignore
+    /// # use mathfn::math::operations::number_type::{ComplexNumber, RealNumber};
+    /// # use mathfn::math::natural_number::NaturalNumber;
+    /// let real = RealNumber::FinitePrecision {
+    ///     integer_part: NaturalNumber::from_u128(2).unwrap(),
+    ///     fractional_part: NaturalNumber::from_u128(0).unwrap(),
+    /// };
+    /// let imag = RealNumber::FinitePrecision {
+    ///     integer_part: NaturalNumber::from_u128(3).unwrap(),
+    ///     fractional_part: NaturalNumber::from_u128(0).unwrap(),
+    /// };
+    /// let c = ComplexNumber::new(real, imag); // 2 + 3i
+    /// ```
     pub fn new(re: R, im: I) -> Self {
         Self { re, im }
     }
@@ -189,6 +291,22 @@ use crate::math::operations::power::Pow;
 ///
 /// Adds two numbers digit-wise. Since it can be infinite, the resulting sum
 /// is represented as a new `DigitalFormula` evaluating digits lazily.
+///
+/// # Examples
+/// ```ignore
+/// # use mathfn::math::operations::number_type::RealNumber;
+/// # use mathfn::math::natural_number::NaturalNumber;
+/// let a = RealNumber::FinitePrecision {
+///     integer_part: NaturalNumber::from_u128(10).unwrap(),
+///     fractional_part: NaturalNumber::from_u128(0).unwrap(),
+/// };
+/// let b = RealNumber::FinitePrecision {
+///     integer_part: NaturalNumber::from_u128(5).unwrap(),
+///     fractional_part: NaturalNumber::from_u128(0).unwrap(),
+/// };
+/// let sum = a + b;
+/// assert_eq!(sum.digit(0).unwrap().value(), 15);
+/// ```
 impl<const BASE: u128, Rhs: NumberType<BASE> + Send + Sync + 'static> Add<Rhs> for RealNumber<BASE> {
     type Output = RealNumber<BASE>;
     fn add(self, rhs: Rhs) -> Self::Output {
@@ -205,6 +323,22 @@ impl<const BASE: u128, Rhs: NumberType<BASE> + Send + Sync + 'static> Add<Rhs> f
 /// Overload `-` operator for two Reals:
 ///
 /// Performs digit-wise subtraction with base-borrow wrapping.
+///
+/// # Examples
+/// ```ignore
+/// # use mathfn::math::operations::number_type::RealNumber;
+/// # use mathfn::math::natural_number::NaturalNumber;
+/// let a = RealNumber::FinitePrecision {
+///     integer_part: NaturalNumber::from_u128(10).unwrap(),
+///     fractional_part: NaturalNumber::from_u128(0).unwrap(),
+/// };
+/// let b = RealNumber::FinitePrecision {
+///     integer_part: NaturalNumber::from_u128(4).unwrap(),
+///     fractional_part: NaturalNumber::from_u128(0).unwrap(),
+/// };
+/// let diff = a - b;
+/// assert_eq!(diff.digit(0).unwrap().value(), 6);
+/// ```
 impl<const BASE: u128, Rhs: NumberType<BASE> + Send + Sync + 'static> Sub<Rhs> for RealNumber<BASE> {
     type Output = RealNumber<BASE>;
     fn sub(self, rhs: Rhs) -> Self::Output {
@@ -221,6 +355,22 @@ impl<const BASE: u128, Rhs: NumberType<BASE> + Send + Sync + 'static> Sub<Rhs> f
 /// Overload `*` operator for two Reals:
 ///
 /// Performs digit-wise multiplication modulo BASE.
+///
+/// # Examples
+/// ```ignore
+/// # use mathfn::math::operations::number_type::RealNumber;
+/// # use mathfn::math::natural_number::NaturalNumber;
+/// let a = RealNumber::FinitePrecision {
+///     integer_part: NaturalNumber::from_u128(3).unwrap(),
+///     fractional_part: NaturalNumber::from_u128(0).unwrap(),
+/// };
+/// let b = RealNumber::FinitePrecision {
+///     integer_part: NaturalNumber::from_u128(5).unwrap(),
+///     fractional_part: NaturalNumber::from_u128(0).unwrap(),
+/// };
+/// let prod = a * b;
+/// assert_eq!(prod.digit(0).unwrap().value(), 15);
+/// ```
 impl<const BASE: u128, Rhs: NumberType<BASE> + Send + Sync + 'static> Mul<Rhs> for RealNumber<BASE> {
     type Output = RealNumber<BASE>;
     fn mul(self, rhs: Rhs) -> Self::Output {
@@ -237,6 +387,22 @@ impl<const BASE: u128, Rhs: NumberType<BASE> + Send + Sync + 'static> Mul<Rhs> f
 /// Overload `/` operator for two Reals:
 ///
 /// Performs digit-wise division. Fails if the divisor digit is 0.
+///
+/// # Examples
+/// ```ignore
+/// # use mathfn::math::operations::number_type::RealNumber;
+/// # use mathfn::math::natural_number::NaturalNumber;
+/// let a = RealNumber::FinitePrecision {
+///     integer_part: NaturalNumber::from_u128(10).unwrap(),
+///     fractional_part: NaturalNumber::from_u128(0).unwrap(),
+/// };
+/// let b = RealNumber::FinitePrecision {
+///     integer_part: NaturalNumber::from_u128(2).unwrap(),
+///     fractional_part: NaturalNumber::from_u128(0).unwrap(),
+/// };
+/// let div = a / b;
+/// assert_eq!(div.digit(0).unwrap().value(), 5);
+/// ```
 impl<const BASE: u128, Rhs: NumberType<BASE> + Send + Sync + 'static> Div<Rhs> for RealNumber<BASE> {
     type Output = RealNumber<BASE>;
     fn div(self, rhs: Rhs) -> Self::Output {
@@ -256,6 +422,22 @@ impl<const BASE: u128, Rhs: NumberType<BASE> + Send + Sync + 'static> Div<Rhs> f
 /// Overload `%` operator for two Reals:
 ///
 /// Performs digit-wise remainder operation.
+///
+/// # Examples
+/// ```ignore
+/// # use mathfn::math::operations::number_type::RealNumber;
+/// # use mathfn::math::natural_number::NaturalNumber;
+/// let a = RealNumber::FinitePrecision {
+///     integer_part: NaturalNumber::from_u128(10).unwrap(),
+///     fractional_part: NaturalNumber::from_u128(0).unwrap(),
+/// };
+/// let b = RealNumber::FinitePrecision {
+///     integer_part: NaturalNumber::from_u128(3).unwrap(),
+///     fractional_part: NaturalNumber::from_u128(0).unwrap(),
+/// };
+/// let rem = a % b;
+/// assert_eq!(rem.digit(0).unwrap().value(), 1);
+/// ```
 impl<const BASE: u128, Rhs: NumberType<BASE> + Send + Sync + 'static> Rem<Rhs> for RealNumber<BASE> {
     type Output = RealNumber<BASE>;
     fn rem(self, rhs: Rhs) -> Self::Output {
@@ -275,6 +457,23 @@ impl<const BASE: u128, Rhs: NumberType<BASE> + Send + Sync + 'static> Rem<Rhs> f
 /// Overload `^` operator for Real ^ Rhs:
 ///
 /// Performs digit-wise exponentiation.
+///
+/// # Examples
+/// ```ignore
+/// # use mathfn::math::operations::number_type::RealNumber;
+/// # use mathfn::math::natural_number::NaturalNumber;
+/// # use mathfn::math::operations::power::Pow;
+/// let a = RealNumber::FinitePrecision {
+///     integer_part: NaturalNumber::from_u128(2).unwrap(),
+///     fractional_part: NaturalNumber::from_u128(0).unwrap(),
+/// };
+/// let b = RealNumber::FinitePrecision {
+///     integer_part: NaturalNumber::from_u128(3).unwrap(),
+///     fractional_part: NaturalNumber::from_u128(0).unwrap(),
+/// };
+/// let power = a.pow(b);
+/// assert_eq!(power.digit(0).unwrap().value(), 8);
+/// ```
 impl<const BASE: u128, Rhs: NumberType<BASE> + Send + Sync + 'static> Pow<Rhs> for RealNumber<BASE> {
     type Output = RealNumber<BASE>;
     fn pow(self, rhs: Rhs) -> Self::Output {
@@ -291,6 +490,23 @@ impl<const BASE: u128, Rhs: NumberType<BASE> + Send + Sync + 'static> Pow<Rhs> f
 /// Complex Addition:
 ///
 /// $$(a + bi) + (c + di) = (a + c) + (b + d)i$$
+///
+/// # Examples
+/// ```ignore
+/// # use mathfn::math::operations::number_type::{ComplexNumber, RealNumber};
+/// # use mathfn::math::natural_number::NaturalNumber;
+/// let x = ComplexNumber::new(
+///     RealNumber::FinitePrecision { integer_part: NaturalNumber::from_u128(1).unwrap(), fractional_part: NaturalNumber::from_u128(0).unwrap() },
+///     RealNumber::FinitePrecision { integer_part: NaturalNumber::from_u128(2).unwrap(), fractional_part: NaturalNumber::from_u128(0).unwrap() }
+/// );
+/// let y = ComplexNumber::new(
+///     RealNumber::FinitePrecision { integer_part: NaturalNumber::from_u128(3).unwrap(), fractional_part: NaturalNumber::from_u128(0).unwrap() },
+///     RealNumber::FinitePrecision { integer_part: NaturalNumber::from_u128(4).unwrap(), fractional_part: NaturalNumber::from_u128(0).unwrap() }
+/// );
+/// let sum = x + y;
+/// assert_eq!(sum.re.digit(0).unwrap().value(), 4);
+/// assert_eq!(sum.im.digit(0).unwrap().value(), 6);
+/// ```
 impl<const BASE: u128, Lre, Lim, Rre, Rim> Add<ComplexNumber<BASE, Rre, Rim>> for ComplexNumber<BASE, Lre, Lim>
 where
     Lre: NumberType<BASE> + Add<Rre, Output = RealNumber<BASE>>,
@@ -307,6 +523,23 @@ where
 /// Complex Subtraction:
 ///
 /// $$(a + bi) - (c + di) = (a - c) + (b - d)i$$
+///
+/// # Examples
+/// ```ignore
+/// # use mathfn::math::operations::number_type::{ComplexNumber, RealNumber};
+/// # use mathfn::math::natural_number::NaturalNumber;
+/// let x = ComplexNumber::new(
+///     RealNumber::FinitePrecision { integer_part: NaturalNumber::from_u128(5).unwrap(), fractional_part: NaturalNumber::from_u128(0).unwrap() },
+///     RealNumber::FinitePrecision { integer_part: NaturalNumber::from_u128(6).unwrap(), fractional_part: NaturalNumber::from_u128(0).unwrap() }
+/// );
+/// let y = ComplexNumber::new(
+///     RealNumber::FinitePrecision { integer_part: NaturalNumber::from_u128(2).unwrap(), fractional_part: NaturalNumber::from_u128(0).unwrap() },
+///     RealNumber::FinitePrecision { integer_part: NaturalNumber::from_u128(3).unwrap(), fractional_part: NaturalNumber::from_u128(0).unwrap() }
+/// );
+/// let diff = x - y;
+/// assert_eq!(diff.re.digit(0).unwrap().value(), 3);
+/// assert_eq!(diff.im.digit(0).unwrap().value(), 3);
+/// ```
 impl<const BASE: u128, Lre, Lim, Rre, Rim> Sub<ComplexNumber<BASE, Rre, Rim>> for ComplexNumber<BASE, Lre, Lim>
 where
     Lre: NumberType<BASE> + Sub<Rre, Output = RealNumber<BASE>>,
@@ -323,6 +556,21 @@ where
 /// Complex Multiplication:
 ///
 /// $$(a + bi) \cdot (c + di) = (ac - bd) + (ad + bc)i$$
+///
+/// # Examples
+/// ```ignore
+/// # use mathfn::math::operations::number_type::{ComplexNumber, RealNumber};
+/// # use mathfn::math::natural_number::NaturalNumber;
+/// let x = ComplexNumber::new(
+///     RealNumber::FinitePrecision { integer_part: NaturalNumber::from_u128(2).unwrap(), fractional_part: NaturalNumber::from_u128(0).unwrap() },
+///     RealNumber::FinitePrecision { integer_part: NaturalNumber::from_u128(3).unwrap(), fractional_part: NaturalNumber::from_u128(0).unwrap() }
+/// );
+/// let y = ComplexNumber::new(
+///     RealNumber::FinitePrecision { integer_part: NaturalNumber::from_u128(4).unwrap(), fractional_part: NaturalNumber::from_u128(0).unwrap() },
+///     RealNumber::FinitePrecision { integer_part: NaturalNumber::from_u128(5).unwrap(), fractional_part: NaturalNumber::from_u128(0).unwrap() }
+/// );
+/// let prod = x * y; // (2*4 - 3*5) + (2*5 + 3*4)i = -7 + 22i
+/// ```
 impl<const BASE: u128, Lre, Lim, Rre, Rim> Mul<ComplexNumber<BASE, Rre, Rim>> for ComplexNumber<BASE, Lre, Lim>
 where
     Lre: NumberType<BASE> + Mul<Rre, Output = RealNumber<BASE>> + Mul<Rim, Output = RealNumber<BASE>> + Clone,
