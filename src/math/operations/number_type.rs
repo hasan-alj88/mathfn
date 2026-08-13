@@ -95,6 +95,135 @@ impl<const BASE: u128> NumberType<BASE> for FinitePrecision<BASE> {
     }
 }
 
+/// A finite continued fraction representation.
+/// Represents a rational number exactly.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FiniteContinuedFractionNumber<const BASE: u128 = 256> {
+    pub integer_part: IntegerNumber<BASE>,                // a_0
+    pub coefficients: Vec<PositiveNaturalNumber<BASE>>,    // a_1, a_2, ..., a_n
+}
+
+fn to_sign_magnitude<const BASE: u128>(val: &IntegerNumber<BASE>) -> (Sign, NaturalNumber<BASE>) {
+    match val {
+        IntegerNumber::Zero => (Sign::Zero, NaturalNumber::new(Vec::new())),
+        IntegerNumber::Positive(pos) => (Sign::Positive, NaturalNumber::from(pos.clone())),
+        IntegerNumber::Negative(pos) => (Sign::Negative, NaturalNumber::from(pos.clone())),
+    }
+}
+
+fn from_sign_magnitude<const BASE: u128>(sign: Sign, magnitude: NaturalNumber<BASE>) -> Result<IntegerNumber<BASE>, MathError> {
+    match magnitude.is_zero() {
+        true => Ok(IntegerNumber::Zero),
+        false => match sign {
+            Sign::Zero => Ok(IntegerNumber::Zero),
+            Sign::Positive => {
+                let pos = PositiveNaturalNumber::try_from(magnitude)?;
+                Ok(IntegerNumber::Positive(pos))
+            }
+            Sign::Negative => {
+                let pos = PositiveNaturalNumber::try_from(magnitude)?;
+                Ok(IntegerNumber::Negative(pos))
+            }
+        }
+    }
+}
+
+fn mul_integers<const BASE: u128>(
+    a: &IntegerNumber<BASE>,
+    b: &IntegerNumber<BASE>,
+) -> Result<IntegerNumber<BASE>, MathError> {
+    let (s_a, m_a) = to_sign_magnitude(a);
+    let (s_b, m_b) = to_sign_magnitude(b);
+    let m_prod = crate::math::natural_number::multiplication::nat_mul_schoolbook(&m_a, &m_b)?;
+    let s_prod = match (s_a, s_b) {
+        (Sign::Zero, _) | (_, Sign::Zero) => Sign::Zero,
+        (Sign::Positive, Sign::Positive) | (Sign::Negative, Sign::Negative) => Sign::Positive,
+        _ => Sign::Negative,
+    };
+    from_sign_magnitude(s_prod, m_prod)
+}
+
+fn add_integers<const BASE: u128>(
+    a: &IntegerNumber<BASE>,
+    b: &IntegerNumber<BASE>,
+) -> Result<IntegerNumber<BASE>, MathError> {
+    let (s_a, m_a) = to_sign_magnitude(a);
+    let (s_b, m_b) = to_sign_magnitude(b);
+
+    match s_a == Sign::Zero {
+        true => Ok(b.clone()),
+        false => match s_b == Sign::Zero {
+            true => Ok(a.clone()),
+            false => {
+                match s_a == s_b {
+                    true => {
+                        let m_sum = crate::math::natural_number::addition::nat_add_schoolbook(&m_a, &m_b)?;
+                        from_sign_magnitude(s_a, m_sum)
+                    }
+                    false => {
+                        match m_a.cmp(&m_b) {
+                            std::cmp::Ordering::Equal => Ok(IntegerNumber::Zero),
+                            std::cmp::Ordering::Greater => {
+                                let m_diff = crate::math::natural_number::multiplication::nat_sub_schoolbook(&m_a, &m_b)?;
+                                from_sign_magnitude(s_a, m_diff)
+                            }
+                            std::cmp::Ordering::Less => {
+                                let m_diff = crate::math::natural_number::multiplication::nat_sub_schoolbook(&m_b, &m_a)?;
+                                from_sign_magnitude(s_b, m_diff)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+impl<const BASE: u128> FiniteContinuedFractionNumber<BASE> {
+    pub fn to_rational(&self) -> Result<crate::math::rational_number::RationalNumber<BASE>, MathError> {
+        let mut p_prev2 = IntegerNumber::Zero;
+        let mut p_prev1 = IntegerNumber::try_from(1i128)?;
+        let mut q_prev2 = IntegerNumber::try_from(1i128)?;
+        let mut q_prev1 = IntegerNumber::Zero;
+
+        let mut p = self.integer_part.clone();
+        let mut q = IntegerNumber::try_from(1i128)?;
+
+        p_prev2 = p_prev1;
+        p_prev1 = p.clone();
+        q_prev2 = q_prev1;
+        q_prev1 = q.clone();
+
+        for coeff in &self.coefficients {
+            let a_k = IntegerNumber::Positive(coeff.clone());
+            p = add_integers(&mul_integers(&a_k, &p_prev1)?, &p_prev2)?;
+            q = add_integers(&mul_integers(&a_k, &q_prev1)?, &q_prev2)?;
+
+            p_prev2 = p_prev1;
+            p_prev1 = p.clone();
+            q_prev2 = q_prev1;
+            q_prev1 = q.clone();
+        }
+
+        let p_nat = match &p {
+            IntegerNumber::Zero => NaturalNumber::new(Vec::new()),
+            IntegerNumber::Positive(abs) | IntegerNumber::Negative(abs) => NaturalNumber::from(abs.clone()),
+        };
+        let q_nat = match q {
+            IntegerNumber::Zero => return Err(MathError::DivisionByZero),
+            IntegerNumber::Positive(abs) | IntegerNumber::Negative(abs) => PositiveNaturalNumber::try_from(NaturalNumber::from(abs))?,
+        };
+
+        crate::math::rational_number::RationalNumber::new(p.sign(), PositiveNaturalNumber::try_from(p_nat)?, q_nat)
+    }
+}
+
+impl<const BASE: u128> NumberType<BASE> for FiniteContinuedFractionNumber<BASE> {
+    fn digit(&self, pos: i64) -> Result<Digit<BASE>, MathError> {
+        self.to_rational()?.digit(pos)
+    }
+}
+
 /// A Real Number representation ($\mathbb{R}$) in base `BASE`.
 ///
 /// Real numbers can be represented using various models depending on their precision
