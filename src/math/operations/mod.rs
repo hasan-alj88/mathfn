@@ -24,3 +24,7 @@ pub use arithmetic::{
     TryAdd, TryAddAssign, TrySub, TrySubAssign, TryMul, TryMulAssign, TryDiv, TryDivAssign,
     TryRem, TryRemAssign,
 };
+
+#[cfg(test)]
+mod tests;
+
