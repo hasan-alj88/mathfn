@@ -147,6 +147,14 @@ fn test_conversions() {
     assert!(raw_vector_err.is_err());
 }
 
+#[test]
+fn test_sign_enum_zero() {
+    use crate::math::sign::Sign;
+    let s = Sign::Zero;
+    assert_eq!(s, Sign::Zero);
+}
+
+
 
 
 

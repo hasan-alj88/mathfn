@@ -2,4 +2,6 @@
 pub enum Sign {
     Positive,
     Negative,
+    Zero,
 }
+
