@@ -22,3 +22,23 @@ fn test_natural_number_creation_and_conversion() {
     assert_eq!(norm_num.digits().len(), 1);
     assert_eq!(norm_num.digits()[0].value(), 5);
 }
+
+#[test]
+fn test_addition() {
+    use crate::math::natural_number::addition::nat_add_schoolbook;
+
+    let a = NaturalNumber::<256>::from_u128(200).unwrap();
+    let b = NaturalNumber::<256>::from_u128(100).unwrap();
+    let sum = nat_add_schoolbook(&a, &b).unwrap();
+    assert_eq!(sum.to_u128().unwrap(), 300);
+
+    // Carry propagation test
+    let large_a = NaturalNumber::<256>::from_u128(255).unwrap();
+    let large_b = NaturalNumber::<256>::from_u128(1).unwrap();
+    let sum2 = nat_add_schoolbook(&large_a, &large_b).unwrap();
+    assert_eq!(sum2.digits().len(), 2);
+    assert_eq!(sum2.digits()[0].value(), 0);
+    assert_eq!(sum2.digits()[1].value(), 1);
+    assert_eq!(sum2.to_u128().unwrap(), 256);
+}
+

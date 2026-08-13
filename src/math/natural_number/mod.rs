@@ -4,6 +4,8 @@ use crate::math::math_error::MathError;
 #[cfg(test)]
 mod tests;
 
+pub mod addition;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NaturalNumber<const BASE: u128 = 256> {
     digits: Vec<Digit<BASE>>,
