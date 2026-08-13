@@ -154,6 +154,30 @@ fn test_sign_enum_zero() {
     assert_eq!(s, Sign::Zero);
 }
 
+#[test]
+fn test_positive_natural_basics() {
+    use crate::math::positive_natural::PositiveNaturalNumber;
+    use crate::math::natural_number::NaturalNumber;
+    use std::convert::TryFrom;
+
+    // Fails on zero
+    assert!(PositiveNaturalNumber::<256>::try_from(0u128).is_err());
+
+    // Succeeds on 1 (represented internally as 0)
+    let one = PositiveNaturalNumber::<256>::try_from(1u128).unwrap();
+    assert_eq!(u128::try_from(one.clone()).unwrap(), 1);
+    assert!(one.offset_val().is_zero());
+
+    // NaturalNumber conversion failable
+    let nat_zero = NaturalNumber::<256>::from_u128(0).unwrap();
+    assert!(PositiveNaturalNumber::try_from(nat_zero).is_err());
+
+    let nat_five = NaturalNumber::<256>::from_u128(5).unwrap();
+    let pos_five = PositiveNaturalNumber::try_from(nat_five).unwrap();
+    assert_eq!(u128::try_from(pos_five).unwrap(), 5);
+}
+
+
 
 
 
