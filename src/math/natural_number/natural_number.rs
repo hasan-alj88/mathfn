@@ -39,11 +39,12 @@ pub struct NaturalNumber<const BASE: u128 = 256> {
 }
 
 impl<const BASE: u128> NaturalNumber<BASE> {
-    pub fn new(digits: Vec<Digit<BASE>>) -> Self {
-        let mut num = Self { digits };
+    pub fn new(digits: impl Into<Vec<Digit<BASE>>>) -> Self {
+        let mut num = Self { digits: digits.into() };
         num.remove_tailing_zero_digits();
         num
     }
+
 
     pub fn from_u128(mut value: u128) -> Result<Self, MathError> {
         let mut digits = Vec::new();

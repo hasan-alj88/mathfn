@@ -244,4 +244,11 @@ impl<const BASE: u128> std::ops::Mul for IntegerNumber<BASE> {
     }
 }
 
+impl<const BASE: u128> From<PositiveNaturalNumber<BASE>> for IntegerNumber<BASE> {
+    fn from(num: PositiveNaturalNumber<BASE>) -> Self {
+        Self::Positive(num)
+    }
+}
+
+
 

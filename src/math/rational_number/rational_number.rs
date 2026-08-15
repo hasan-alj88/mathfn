@@ -3,7 +3,7 @@ use crate::math::positive_natural::PositiveNaturalNumber;
 use crate::math::natural_number::NaturalNumber;
 use crate::math::natural_number::division::{nat_div_rem_schoolbook, nat_gcd};
 use crate::math::integer_number::IntegerNumber;
-use crate::math::math_error::MathError;
+use crate::math::math_error::{MathError, IntoMathError};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RationalNumber<const BASE: u128 = 256> {
@@ -13,11 +13,19 @@ pub struct RationalNumber<const BASE: u128 = 256> {
 }
 
 impl<const BASE: u128> RationalNumber<BASE> {
-    pub fn new(
+    pub fn new<N, D>(
         sign: Sign,
-        numerator: PositiveNaturalNumber<BASE>,
-        denominator: PositiveNaturalNumber<BASE>,
-    ) -> Result<Self, MathError> {
+        numerator: N,
+        denominator: D,
+    ) -> Result<Self, MathError>
+    where
+        N: TryInto<PositiveNaturalNumber<BASE>>,
+        D: TryInto<PositiveNaturalNumber<BASE>>,
+        N::Error: crate::math::math_error::IntoMathError,
+        D::Error: crate::math::math_error::IntoMathError,
+    {
+        let num = numerator.try_into().map_err(|e| e.into_math_error())?;
+        let den = denominator.try_into().map_err(|e| e.into_math_error())?;
         match sign {
             Sign::Zero => {
                 let one = PositiveNaturalNumber::try_from(1u128)?;
@@ -28,8 +36,8 @@ impl<const BASE: u128> RationalNumber<BASE> {
                 })
             }
             _ => {
-                let num_nat = NaturalNumber::from(numerator);
-                let den_nat = NaturalNumber::from(denominator);
+                let num_nat = NaturalNumber::from(num);
+                let den_nat = NaturalNumber::from(den);
                 let g = nat_gcd(num_nat.clone(), den_nat.clone())?;
 
                 let (num_red, _) = nat_div_rem_schoolbook(&num_nat, &g)?;
@@ -43,6 +51,7 @@ impl<const BASE: u128> RationalNumber<BASE> {
             }
         }
     }
+
 
     pub fn sign(&self) -> Sign {
         self.sign
@@ -331,5 +340,32 @@ impl<const BASE: u128> std::ops::Mul for RationalNumber<BASE> {
         RationalNumber::new(res_sign, num_prod_pos, den_prod_pos)
     }
 }
+
+impl<const BASE: u128> TryFrom<RationalNumber<BASE>> for NaturalNumber<BASE> {
+    type Error = MathError;
+
+    fn try_from(num: RationalNumber<BASE>) -> Result<Self, Self::Error> {
+        let int_num = IntegerNumber::try_from(num)?;
+        NaturalNumber::try_from(int_num)
+    }
+}
+
+impl<const BASE: u128> TryFrom<RationalNumber<BASE>> for PositiveNaturalNumber<BASE> {
+    type Error = MathError;
+
+    fn try_from(num: RationalNumber<BASE>) -> Result<Self, Self::Error> {
+        let int_num = IntegerNumber::try_from(num)?;
+        PositiveNaturalNumber::try_from(int_num)
+    }
+}
+
+impl<const BASE: u128> TryFrom<RationalNumber<BASE>> for crate::math::operations::number_type::FiniteContinuedFractionNumber<BASE> {
+    type Error = MathError;
+
+    fn try_from(num: RationalNumber<BASE>) -> Result<Self, Self::Error> {
+        num.to_continued_fraction()
+    }
+}
+
 
 

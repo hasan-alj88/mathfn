@@ -20,6 +20,7 @@ pub enum MathError {
 }
 
 
+
 #[derive(Debug, Error)]
 pub enum ComputingError {
     #[error("Unable to cast {source_type:?} to {target_type:?}.")]
@@ -28,4 +29,20 @@ pub enum ComputingError {
         target_type: String,
     },
 
+}
+
+pub trait IntoMathError {
+    fn into_math_error(self) -> MathError;
+}
+
+impl IntoMathError for MathError {
+    fn into_math_error(self) -> MathError {
+        self
+    }
+}
+
+impl IntoMathError for std::convert::Infallible {
+    fn into_math_error(self) -> MathError {
+        match self {}
+    }
 }

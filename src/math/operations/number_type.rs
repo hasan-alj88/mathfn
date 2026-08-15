@@ -283,6 +283,19 @@ impl<const BASE: u128> NumberType<BASE> for RealNumber<BASE> {
     }
 }
 
+impl<const BASE: u128> From<FinitePrecision<BASE>> for RealNumber<BASE> {
+    fn from(fp: FinitePrecision<BASE>) -> Self {
+        Self::ExactFinite(fp)
+    }
+}
+
+impl<const BASE: u128> From<FiniteContinuedFractionNumber<BASE>> for RealNumber<BASE> {
+    fn from(fcf: FiniteContinuedFractionNumber<BASE>) -> Self {
+        Self::FiniteContinuedFraction(fcf)
+    }
+}
+
+
 /// A Complex Number ($\mathbb{C}$) of the form $a + bi$.
 ///
 /// Generic over the real part `R` and imaginary part `I`, defaulting to `RealNumber`.
@@ -647,4 +660,64 @@ impl<const BASE: u128> std::ops::Mul for FiniteContinuedFractionNumber<BASE> {
         prod_rat.to_continued_fraction()
     }
 }
+
+impl<const BASE: u128> TryFrom<FiniteContinuedFractionNumber<BASE>> for crate::math::rational_number::RationalNumber<BASE> {
+    type Error = MathError;
+
+    fn try_from(fcf: FiniteContinuedFractionNumber<BASE>) -> Result<Self, Self::Error> {
+        fcf.to_rational()
+    }
+}
+
+impl<const BASE: u128> TryFrom<FiniteContinuedFractionNumber<BASE>> for IntegerNumber<BASE> {
+    type Error = MathError;
+
+    fn try_from(fcf: FiniteContinuedFractionNumber<BASE>) -> Result<Self, Self::Error> {
+        let rat = fcf.to_rational()?;
+        IntegerNumber::try_from(rat)
+    }
+}
+
+impl<const BASE: u128> TryFrom<FiniteContinuedFractionNumber<BASE>> for NaturalNumber<BASE> {
+    type Error = MathError;
+
+    fn try_from(fcf: FiniteContinuedFractionNumber<BASE>) -> Result<Self, Self::Error> {
+        let rat = fcf.to_rational()?;
+        NaturalNumber::try_from(rat)
+    }
+}
+
+impl<const BASE: u128> TryFrom<FiniteContinuedFractionNumber<BASE>> for PositiveNaturalNumber<BASE> {
+    type Error = MathError;
+
+    fn try_from(fcf: FiniteContinuedFractionNumber<BASE>) -> Result<Self, Self::Error> {
+        let rat = fcf.to_rational()?;
+        PositiveNaturalNumber::try_from(rat)
+    }
+}
+
+impl<const BASE: u128> TryFrom<IntegerNumber<BASE>> for FiniteContinuedFractionNumber<BASE> {
+    type Error = MathError;
+
+    fn try_from(num: IntegerNumber<BASE>) -> Result<Self, Self::Error> {
+        crate::math::rational_number::RationalNumber::from(num).to_continued_fraction()
+    }
+}
+
+impl<const BASE: u128> TryFrom<NaturalNumber<BASE>> for FiniteContinuedFractionNumber<BASE> {
+    type Error = MathError;
+
+    fn try_from(num: NaturalNumber<BASE>) -> Result<Self, Self::Error> {
+        crate::math::rational_number::RationalNumber::from(num).to_continued_fraction()
+    }
+}
+
+impl<const BASE: u128> TryFrom<PositiveNaturalNumber<BASE>> for FiniteContinuedFractionNumber<BASE> {
+    type Error = MathError;
+
+    fn try_from(num: PositiveNaturalNumber<BASE>) -> Result<Self, Self::Error> {
+        crate::math::rational_number::RationalNumber::from(num).to_continued_fraction()
+    }
+}
+
 
