@@ -9,5 +9,7 @@ pub mod integer_number;
 pub mod rational_number;
 
 
+pub mod geometric_algebra;
+
 pub use sign::Sign;
 
