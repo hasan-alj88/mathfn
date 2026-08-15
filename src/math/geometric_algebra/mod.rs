@@ -10,3 +10,7 @@ pub mod transforms;
 pub use blade::{Blade, Component};
 pub use multivector::MultiVector;
 pub use coordinate_systems::CoordinateSystem;
+
+#[cfg(test)]
+pub mod tests;
+
