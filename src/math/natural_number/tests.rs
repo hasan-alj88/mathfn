@@ -212,6 +212,34 @@ fn test_natural_division_and_gcd() {
     assert_eq!(g.to_u128().unwrap(), 6);
 }
 
+#[test]
+fn test_natural_number_operators() {
+    let a = NaturalNumber::<256>::from_u128(200).unwrap();
+    let b = NaturalNumber::<256>::from_u128(100).unwrap();
+    
+    let sum = (a.clone() + b.clone()).unwrap();
+    assert_eq!(sum.to_u128().unwrap(), 300);
+
+    let prod = (a * b).unwrap();
+    assert_eq!(prod.to_u128().unwrap(), 20000);
+}
+
+#[test]
+fn test_positive_natural_operators() {
+    use crate::math::positive_natural::PositiveNaturalNumber;
+    use std::convert::TryFrom;
+
+    let a = PositiveNaturalNumber::<256>::try_from(5u128).unwrap();
+    let b = PositiveNaturalNumber::<256>::try_from(10u128).unwrap();
+
+    let sum = (a.clone() + b.clone()).unwrap();
+    assert_eq!(u128::try_from(sum).unwrap(), 15);
+
+    let prod = (a * b).unwrap();
+    assert_eq!(u128::try_from(prod).unwrap(), 50);
+}
+
+
 
 
 

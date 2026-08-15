@@ -71,3 +71,26 @@ impl<const BASE: u128> From<PositiveNaturalNumber<BASE>> for NaturalNumber<BASE>
         nat_add_schoolbook(&num.0, &one).unwrap()
     }
 }
+
+impl<const BASE: u128> std::ops::Add for PositiveNaturalNumber<BASE> {
+    type Output = Result<Self, MathError>;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        let sum_offset = nat_add_schoolbook(&self.0, &rhs.0)?;
+        let one = NaturalNumber::from_u128(1)?;
+        let res_offset = nat_add_schoolbook(&sum_offset, &one)?;
+        Ok(Self(res_offset))
+    }
+}
+
+impl<const BASE: u128> std::ops::Mul for PositiveNaturalNumber<BASE> {
+    type Output = Result<Self, MathError>;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        let p1 = crate::math::natural_number::multiplication::nat_mul_karatsuba(&self.0, &rhs.0)?;
+        let s1 = nat_add_schoolbook(&p1, &self.0)?;
+        let res_offset = nat_add_schoolbook(&s1, &rhs.0)?;
+        Ok(Self(res_offset))
+    }
+}
+

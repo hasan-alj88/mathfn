@@ -163,3 +163,85 @@ impl<const BASE: u128> crate::math::operations::NumberType<BASE> for IntegerNumb
     }
 }
 
+fn to_sign_magnitude<const BASE: u128>(val: &IntegerNumber<BASE>) -> (Sign, NaturalNumber<BASE>) {
+    match val {
+        IntegerNumber::Zero => (Sign::Zero, NaturalNumber::new(Vec::new())),
+        IntegerNumber::Positive(pos) => (Sign::Positive, NaturalNumber::from(pos.clone())),
+        IntegerNumber::Negative(pos) => (Sign::Negative, NaturalNumber::from(pos.clone())),
+    }
+}
+
+fn from_sign_magnitude<const BASE: u128>(
+    sign: Sign,
+    magnitude: NaturalNumber<BASE>,
+) -> Result<IntegerNumber<BASE>, MathError> {
+    match magnitude.is_zero() {
+        true => Ok(IntegerNumber::Zero),
+        false => match sign {
+            Sign::Zero => Ok(IntegerNumber::Zero),
+            Sign::Positive => {
+                let pos = PositiveNaturalNumber::try_from(magnitude)?;
+                Ok(IntegerNumber::Positive(pos))
+            }
+            Sign::Negative => {
+                let pos = PositiveNaturalNumber::try_from(magnitude)?;
+                Ok(IntegerNumber::Negative(pos))
+            }
+        }
+    }
+}
+
+impl<const BASE: u128> std::ops::Add for IntegerNumber<BASE> {
+    type Output = Result<Self, MathError>;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        let (s_a, m_a) = to_sign_magnitude(&self);
+        let (s_b, m_b) = to_sign_magnitude(&rhs);
+
+        match s_a == Sign::Zero {
+            true => Ok(rhs),
+            false => match s_b == Sign::Zero {
+                true => Ok(self),
+                false => {
+                    match s_a == s_b {
+                        true => {
+                            let m_sum = crate::math::natural_number::addition::nat_add_schoolbook(&m_a, &m_b)?;
+                            from_sign_magnitude(s_a, m_sum)
+                        }
+                        false => {
+                            match m_a.cmp(&m_b) {
+                                std::cmp::Ordering::Equal => Ok(IntegerNumber::Zero),
+                                std::cmp::Ordering::Greater => {
+                                    let m_diff = crate::math::natural_number::multiplication::nat_sub_schoolbook(&m_a, &m_b)?;
+                                    from_sign_magnitude(s_a, m_diff)
+                                }
+                                std::cmp::Ordering::Less => {
+                                    let m_diff = crate::math::natural_number::multiplication::nat_sub_schoolbook(&m_b, &m_a)?;
+                                    from_sign_magnitude(s_b, m_diff)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+impl<const BASE: u128> std::ops::Mul for IntegerNumber<BASE> {
+    type Output = Result<Self, MathError>;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        let (s_a, m_a) = to_sign_magnitude(&self);
+        let (s_b, m_b) = to_sign_magnitude(&rhs);
+        let m_prod = crate::math::natural_number::multiplication::nat_mul_karatsuba(&m_a, &m_b)?;
+        let s_prod = match (s_a, s_b) {
+            (Sign::Zero, _) | (_, Sign::Zero) => Sign::Zero,
+            (Sign::Positive, Sign::Positive) | (Sign::Negative, Sign::Negative) => Sign::Positive,
+            _ => Sign::Negative,
+        };
+        from_sign_magnitude(s_prod, m_prod)
+    }
+}
+
+

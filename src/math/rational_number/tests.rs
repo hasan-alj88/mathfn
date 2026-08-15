@@ -23,3 +23,55 @@ fn test_rational_basics() {
     assert_eq!(u128::try_from(r_from_prim.numerator().clone()).unwrap(), 5);
     assert_eq!(u128::try_from(r_from_prim.denominator().clone()).unwrap(), 1);
 }
+
+#[test]
+fn test_rational_operators_and_cf() {
+    let half = RationalNumber::<256>::new(
+        Sign::Positive,
+        crate::math::positive_natural::PositiveNaturalNumber::<256>::try_from(1u128).unwrap(),
+        crate::math::positive_natural::PositiveNaturalNumber::<256>::try_from(2u128).unwrap(),
+    ).unwrap();
+    let third = RationalNumber::<256>::new(
+        Sign::Positive,
+        crate::math::positive_natural::PositiveNaturalNumber::<256>::try_from(1u128).unwrap(),
+        crate::math::positive_natural::PositiveNaturalNumber::<256>::try_from(3u128).unwrap(),
+    ).unwrap();
+
+    // 1/2 + 1/3 = 5/6
+    let sum = (half.clone() + third.clone()).unwrap();
+    assert_eq!(u128::try_from(sum.numerator().clone()).unwrap(), 5);
+    assert_eq!(u128::try_from(sum.denominator().clone()).unwrap(), 6);
+    assert_eq!(sum.sign(), Sign::Positive);
+
+    // 1/2 * 1/3 = 1/6
+    let prod = (half.clone() * third.clone()).unwrap();
+    assert_eq!(u128::try_from(prod.numerator().clone()).unwrap(), 1);
+    assert_eq!(u128::try_from(prod.denominator().clone()).unwrap(), 6);
+    assert_eq!(prod.sign(), Sign::Positive);
+
+    // Continued fraction of 45/16 -> [2; 1, 4, 3]
+    let r_cf = RationalNumber::<256>::new(
+        Sign::Positive,
+        crate::math::positive_natural::PositiveNaturalNumber::<256>::try_from(45u128).unwrap(),
+        crate::math::positive_natural::PositiveNaturalNumber::<256>::try_from(16u128).unwrap(),
+    ).unwrap();
+    let cf = r_cf.to_continued_fraction().unwrap();
+    assert_eq!(i32::try_from(cf.integer_part.clone()).unwrap(), 2);
+    assert_eq!(cf.coefficients.len(), 3);
+    assert_eq!(u128::try_from(cf.coefficients[0].clone()).unwrap(), 1);
+    assert_eq!(u128::try_from(cf.coefficients[1].clone()).unwrap(), 4);
+    assert_eq!(u128::try_from(cf.coefficients[2].clone()).unwrap(), 3);
+
+    // Continued fraction of -45/16 -> [-3; 5, 3]
+    let r_cf_neg = RationalNumber::<256>::new(
+        Sign::Negative,
+        crate::math::positive_natural::PositiveNaturalNumber::<256>::try_from(45u128).unwrap(),
+        crate::math::positive_natural::PositiveNaturalNumber::<256>::try_from(16u128).unwrap(),
+    ).unwrap();
+    let cf_neg = r_cf_neg.to_continued_fraction().unwrap();
+    assert_eq!(i32::try_from(cf_neg.integer_part.clone()).unwrap(), -3);
+    assert_eq!(cf_neg.coefficients.len(), 2);
+    assert_eq!(u128::try_from(cf_neg.coefficients[0].clone()).unwrap(), 5);
+    assert_eq!(u128::try_from(cf_neg.coefficients[1].clone()).unwrap(), 3);
+}
+

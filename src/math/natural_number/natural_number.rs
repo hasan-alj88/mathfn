@@ -229,4 +229,21 @@ impl<const BASE: u128> crate::math::operations::NumberType<BASE> for NaturalNumb
     }
 }
 
+impl<const BASE: u128> std::ops::Add for NaturalNumber<BASE> {
+    type Output = Result<Self, MathError>;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        crate::math::natural_number::addition::nat_add_schoolbook(&self, &rhs)
+    }
+}
+
+impl<const BASE: u128> std::ops::Mul for NaturalNumber<BASE> {
+    type Output = Result<Self, MathError>;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        crate::math::natural_number::multiplication::nat_mul_karatsuba(&self, &rhs)
+    }
+}
+
+
 

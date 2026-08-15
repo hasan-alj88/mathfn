@@ -11,6 +11,8 @@ pub mod logarithm;
 pub mod power;
 pub mod arithmetic;
 pub mod number_type;
+pub mod cross_type;
+
 
 pub use number_type::NumberType;
 

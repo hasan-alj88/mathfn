@@ -27,3 +27,27 @@ fn test_integer_conversions() {
     let int_from_nat = IntegerNumber::from(nat);
     assert_eq!(i32::try_from(int_from_nat).unwrap(), 10);
 }
+
+#[test]
+fn test_integer_operators() {
+    let zero = IntegerNumber::<256>::Zero;
+    let a = IntegerNumber::<256>::try_from(100i32).unwrap();
+    let b = IntegerNumber::<256>::try_from(-40i32).unwrap();
+
+    // 100 + (-40) = 60
+    let sum = (a.clone() + b.clone()).unwrap();
+    assert_eq!(i32::try_from(sum).unwrap(), 60);
+
+    // 100 * (-40) = -4000
+    let prod = (a.clone() * b.clone()).unwrap();
+    assert_eq!(i32::try_from(prod).unwrap(), -4000);
+
+    // a + 0 = a
+    let sum_zero = (a.clone() + zero.clone()).unwrap();
+    assert_eq!(i32::try_from(sum_zero).unwrap(), 100);
+
+    // a * 0 = 0
+    let prod_zero = (a.clone() * zero.clone()).unwrap();
+    assert_eq!(i32::try_from(prod_zero).unwrap(), 0);
+}
+
